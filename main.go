@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -34,13 +35,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := run(*filename); err != nil {
+	if err := run(*filename, os.Stdout); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-func run(filename string) error {
+func run(filename string, out io.Writer) error {
 	file, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return err
@@ -48,10 +49,15 @@ func run(filename string) error {
 
 	htmlData := parseContent(file)
 
-	previewOut := fmt.Sprintf("%s.html", filepath.Base(filename))
-	fmt.Printf("Saving preview html file in %s\n", previewOut)
-
-	return saveHtml(previewOut, htmlData)
+	tempfile, err := ioutil.TempFile("", "mdp_"+filepath.Base(filename)+"_*.html")
+	if err != nil {
+		return err
+	}
+	if err := tempfile.Close(); err != nil {
+		return err
+	}
+	fmt.Fprintf(out, "Saving preview html file in %s\n", tempfile.Name())
+	return saveHtml(tempfile.Name(), htmlData)
 }
 
 func parseContent(markdown []byte) []byte {

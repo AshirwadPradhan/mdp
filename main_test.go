@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
 )
 
 const (
 	inputFile  = "./testdata/test_basic.md"
 	goldenFile = "./testdata/test_basic.md.html"
-	outFile    = "test_basic.md.html"
 )
 
 func TestParseContent(t *testing.T) {
@@ -34,10 +34,13 @@ func TestParseContent(t *testing.T) {
 }
 
 func TestRun(t *testing.T) {
-	if err := run(inputFile); err != nil {
+
+	var mockStdOut bytes.Buffer
+	if err := run(inputFile, &mockStdOut); err != nil {
 		t.Fatal(err)
 	}
-
+	parseStdout := strings.Split(strings.TrimSpace(mockStdOut.String()), " ")
+	outFile := parseStdout[len(parseStdout)-1]
 	gen, err := ioutil.ReadFile(outFile)
 	if err != nil {
 		t.Fatal(err)
