@@ -7,7 +7,9 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/russross/blackfriday/v2"
@@ -28,6 +30,7 @@ const footer = `
 
 func main() {
 	filename := flag.String("file", "", "Markdown file to preview")
+	skip := flag.Bool("skip", false, "Skip auto-preview")
 	flag.Parse()
 
 	if *filename == "" {
@@ -35,13 +38,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := run(*filename, os.Stdout); err != nil {
+	if err := run(*filename, os.Stdout, *skip); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-func run(filename string, out io.Writer) error {
+func run(filename string, out io.Writer, skipPreview bool) error {
 	file, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return err
@@ -56,8 +59,16 @@ func run(filename string, out io.Writer) error {
 	if err := tempfile.Close(); err != nil {
 		return err
 	}
-	fmt.Fprintf(out, "Saving preview html file in %s\n", tempfile.Name())
-	return saveHtml(tempfile.Name(), htmlData)
+	genFile := tempfile.Name()
+	fmt.Fprintf(out, "Saving preview html file in %s\n", genFile)
+	if err := saveHtml(genFile, htmlData); err != nil {
+		return err
+	}
+
+	if skipPreview {
+		return nil
+	}
+	return preview(genFile)
 }
 
 func parseContent(markdown []byte) []byte {
@@ -75,4 +86,28 @@ func parseContent(markdown []byte) []byte {
 
 func saveHtml(filename string, data []byte) error {
 	return ioutil.WriteFile(filename, data, 0644)
+}
+
+func preview(filename string) error {
+	cName := ""
+	cParams := []string{}
+
+	switch runtime.GOOS {
+	case "linux":
+		cName = "xdg-open"
+	case "windows":
+		cName = "cmd.exe"
+		cParams = []string{"/C", "start"}
+	case "darwin":
+		cName = "open"
+	default:
+		return fmt.Errorf("os is not supported")
+	}
+
+	cParams = append(cParams, filename)
+	cPath, err := exec.LookPath(cName)
+	if err != nil {
+		return err
+	}
+	return exec.Command(cPath, cParams...).Run()
 }
