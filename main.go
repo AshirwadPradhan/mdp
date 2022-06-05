@@ -16,7 +16,7 @@ const header = `
 <!DOCTYPE html>
 <html>
 	<head>
-		<meta http-equiv="content-type content="text/html; charset=utf-8">
+		<meta http-equiv="content-type" content="text/html; charset=utf-8">
 		<title> Yet Another Markdown Preview </title>
 	</head>
 	<body>`
