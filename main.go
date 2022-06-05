@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"time"
 
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/russross/blackfriday/v2"
@@ -68,7 +69,12 @@ func run(filename string, out io.Writer, skipPreview bool) error {
 	if skipPreview {
 		return nil
 	}
-	return preview(genFile)
+	defer os.Remove(genFile)
+	if err := preview(genFile); err != nil {
+		return nil
+	}
+	time.Sleep(2 * time.Second)
+	return nil
 }
 
 func parseContent(markdown []byte) []byte {
